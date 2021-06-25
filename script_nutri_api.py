@@ -1,3 +1,4 @@
+from nutriscore import Nutriscore
 import requests
 import random
 from decouple import config
@@ -36,97 +37,22 @@ def get_nutriscore(listOfFood, listOfNutrients):
         if req.status_code == 200:
             json = req.json()
             brandes = json["branded"]
+            # itération sur chaque marque de produit
             for j in range(len(brandes)):
                 brandes[j]["new_nutrients"] = []
+                # Itération sur chaque nutriment pour récupérer les labels correspondant
                 for k in range(len(brandes[j]["full_nutrients"])):
                     for nutri in range(len(listOfNutrients)):
                         if brandes[j]["full_nutrients"][k]["attr_id"] == listOfNutrients[nutri]["attr_id"]:
                             brandes[j]["new_nutrients"].append({'label':listOfNutrients[nutri]["usda_nutr_desc"],'value':brandes[j]["full_nutrients"][k]['value']})
                 del brandes[j]["full_nutrients"]
+
+                # Récupération du nutriscore du produit
+                nutriscore = Nutriscore(brandes[j]["new_nutrients"])
+                brandes[j]["nutriscore"] = nutriscore.nutriscore
+
                 print(brandes[j])
 
-def calculate_nutriscore():
-    score = 0
-    badPoints = 0
-    goodPoints = 0
-
-    # Bad points
-    ## Energie
-    ### 0 : <=335
-    ### 1 : >335
-    ### 2 : >670
-    ### 3 : >1005
-    ### 4 : >1340
-    ### 5 : >1675
-    ### 6 : >2010
-    ### 7 : >2345
-    ### 8 : >2680
-    ### 9 : >3015
-    ### 10 : >3350
-    ## Sucre
-    ### 0 : <=4.5
-    ### 1 : >4.5
-    ### 2 : >9
-    ### 3 : >13.5
-    ### 4 : >18
-    ### 5 : >22.5
-    ### 6 : >27
-    ### 7 : >31
-    ### 8 : >36
-    ### 9 : >40
-    ### 10 : >45
-    ## Acide gras saturés
-    ### 0 : <=1
-    ### 1 : >1
-    ### 2 : >2
-    ### 3 : >3
-    ### 4 : >4
-    ### 5 : >5
-    ### 6 : >6
-    ### 7 : >7
-    ### 8 : >8
-    ### 9 : >9
-    ### 10 : >10
-    ## Sodium
-    ### 0 : <=90
-    ### 1 : >90
-    ### 2 : >180
-    ### 3 : >270
-    ### 4 : >360
-    ### 5 : >450
-    ### 6 : >540
-    ### 7 : >630
-    ### 8 : >720
-    ### 9 : >810
-    ### 10 : >900
-
-    # Good points
-    ## Fruits
-    ## Fibres
-    ### 0 : <=0.9
-    ### 1 : >0.9
-    ### 2 : >1.9
-    ### 3 : >2.8
-    ### 4 : >3.7
-    ### 5 : >4.7
-    ## Protéines
-    ### 0 : <=1.6
-    ### 1 : >1.6
-    ### 2 : >3.2
-    ### 3 : >4.8
-    ### 4 : >6.4
-    ### 5 : >8.0
-
-    if score <= 0 :
-        return "A"
-    elif score >= 1 and score <= 10 :
-        return "B"
-    elif score >= 11 and score <= 20 :
-        return "C"
-    elif score >= 21 and score <= 30 :
-        return "D"
-    elif score >= 31 and score <= 40 :
-        return "E"
 
 
 print("----- listOfFood ------")
