@@ -14,6 +14,7 @@ class ETL:
         headers = {"x-app-id":ID, "x-app-key": KEY, "x-remote-user-id": "0"}
         URL = 'https://trackapi.nutritionix.com/v2/utils/nutrients'
         req = requests.get(URL, headers=headers)
+        ## Vérification que le code est bien 200
         if req.status_code == 200:
             print(req.json())
             return req.json()
@@ -26,9 +27,11 @@ class ETL:
         for i in range(len(ALPHABET)):
             URL = f"https://api.edamam.com/auto-complete?app_id={ID}&app_key={KEY}&q={ALPHABET[i]}"
             req = requests.get(URL)
+            ## Vérification que le code est bien 200
             if req.status_code == 200:
                 foodname = foodname+req.json()
         return foodname
+
     ###
     # Ne prend pas d'input
     # Est lancée une fois au début
@@ -44,6 +47,7 @@ class ETL:
             URL = f'https://trackapi.nutritionix.com/v2/search/instant?query={self.listOfFood[i]}&branded=true&common=false&detailed=true&claims=true'
             print(URL)
             req = requests.get(URL, headers=headers)
+            ## Vérification que le code est bien 200
             if req.status_code == 200:
                 json = req.json()
                 brandes = json["branded"]
@@ -56,10 +60,10 @@ class ETL:
     # Contient toutes les règles de transformation à appliquer sur les données
     ###
     def transform(self,*args):
-        """Placeholder, change, rename, remove... """
-        # print("------------")    
-        args[0]["new_nutrients"] = []
+        print("------------")    
+        
         # Itération sur chaque nutriment pour récupérer les labels correspondant
+        args[0]["new_nutrients"] = []
         for k in range(len(args[0]["full_nutrients"])):
             for nutri in range(len(self.listOfNutrients)):
                 if args[0]["full_nutrients"][k]["attr_id"] == self.listOfNutrients[nutri]["attr_id"]:
@@ -70,15 +74,50 @@ class ETL:
         nutriscore = Nutriscore(args[0]["new_nutrients"])
         args[0]["nutriscore"] = nutriscore.nutriscore
 
+        # Récupération de la photo
         args[0]['photo'] = args[0]['photo']['thumb']
 
+        # Récupération des ingrédients
+        args[0]['ingredients'] = []
+        ID_RECIPE = config('RECIPEAPI_SECRET_ID')
+        KEY_RECIPE = config('RECIPEAPI_SECRET_KEY')
+        ID_FOODNAME = config('FOODNAMEAPI_SECRET_ID')
+        KEY_FOODNAME = config('FOODNAMEAPI_SECRET_KEY')
+        ## Appel de l'API des recettes
+        URL = f"https://api.edamam.com/api/recipes/v2?app_id={ID_RECIPE}&app_key={KEY_RECIPE}&type=public&q={args[0]['food_name']}"
+        req = requests.get(URL)
+        ## Vérification que le code est bien 200
+        if req.status_code == 200:
+            jsonrecipe = req.json()
+            ## Vérification qu'il y a bien quelque chose qui existe
+            if jsonrecipe["hits"]:
+                ## Récupération des ingrédients
+                ingredients = jsonrecipe["hits"][0]["recipe"]["ingredients"]
+                ## Pour chaque ingrédient
+                for i in range(len(ingredients)):
+                    ## Récupération de l'id de l'ingrédient
+                    foodId = ingredients[i]["foodId"]
+                    # Appel de l'API de la nourriture à partir de l'id de l'ingrédient
+                    URL = f"https://api.edamam.com/api/food-database/v2/parser?app_id={ID_FOODNAME}&app_key={KEY_FOODNAME}&ingr={foodId}"
+                    req = requests.get(URL)
+                    ## Vérification que le code est bien 200
+                    if req.status_code == 200:
+                        jsonfooddb = req.json()
+                        ## Récupération du nom de l'ingrédient
+                        nameIngr = jsonfooddb["hints"][0]["food"]["label"]
+                        args[0]['ingredients'].append(nameIngr)
+        
+
+        # Suppression des données inutiles
         del args[0]["nix_brand_id"]
         del args[0]["nix_item_id"]
         del args[0]["brand_type"]
         del args[0]["region"]
-        del args[0]["locale"]
         del args[0]["brand_name_item_name"]
         del args[0]["serving_qty"]
+        del args[0]["serving_weight_grams"]
+        del args[0]["serving_unit"]
+        del args[0]["nf_calories"]
         del args[0]["new_nutrients"]
 
         yield args
@@ -88,7 +127,9 @@ class ETL:
     # Ne retourne absolument rien
     ###
     def load(self,*args):
-        """Placeholder, change, rename, remove... """
+        # Check si ça existe en BDD
+        # Si ça existe, MAJ des informations ?
+        # Si non, insert en BDD
         print(*args)
 
     ###
