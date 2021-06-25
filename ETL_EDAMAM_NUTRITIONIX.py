@@ -1,13 +1,19 @@
+import elasticsearch
 from source import Source
 import bonobo
 import requests
 from nutriscore import Nutriscore
 from decouple import config
+from elasticsearch import Elasticsearch
 
 class ETL:
     def __init__(self):
         self.listOfFood = self.get_foodname()
         self.listOfNutrients = self.get_nutrients()
+        self.elasticsearch = Elasticsearch(
+            cloud_id=config('ELASTIC_CLOUD_ID'),
+            http_auth=(config('ELASTIC_USERNAME'), config('ELASTIC_PASSWORD')),
+        )
     
     def get_nutrients(self):
         ID = config('NUTRITIONAPI_SECRET_ID')
