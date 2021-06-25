@@ -1,3 +1,4 @@
+from source import Source
 import bonobo
 import requests
 from nutriscore import Nutriscore
@@ -107,6 +108,8 @@ class ETL:
                         nameIngr = jsonfooddb["hints"][0]["food"]["label"]
                         args[0]['ingredients'].append(nameIngr)
         
+        # Ajout de la source
+        args[0]["source"] = Source.EDAMAM_NUTRITIONIX
 
         # Suppression des données inutiles
         del args[0]["nix_brand_id"]
@@ -128,7 +131,6 @@ class ETL:
     ###
     def load(self,*args):
         # Check si ça existe en BDD
-        # Si ça existe, MAJ des informations ?
         # Si non, insert en BDD
         print(*args)
 
