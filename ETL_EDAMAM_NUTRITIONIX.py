@@ -109,7 +109,7 @@ class ETL:
                         args[0]['ingredients'].append(nameIngr)
         
         # Ajout de la source
-        args[0]["source"] = Source.EDAMAM_NUTRITIONIX.name
+        args[0]["source_api"] = Source.EDAMAM_NUTRITIONIX.name
 
         # Suppression des données inutiles
         del args[0]["nix_brand_id"]
