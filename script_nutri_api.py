@@ -1,6 +1,5 @@
 from nutriscore import Nutriscore
 import requests
-import random
 from decouple import config
 
 def get_foodname():
@@ -25,19 +24,19 @@ def get_nutrients():
         print(req.json())
         return req.json()
 
-def get_nutriscore(listOfFood, listOfNutrients):
+def extract_data(listOfFood, listOfNutrients):
     ID = config('NUTRITIONAPI_SECRET_ID')
     KEY = config('NUTRITIONAPI_SECRET_KEY')
     headers = {"x-app-id":ID, "x-app-key": KEY, "x-remote-user-id": "0"}
-    # for i in range(len(listOfFood)):
-    for i in range(1):
+    for i in range(len(listOfFood)):
+    # for i in range(1):
         URL = f'https://trackapi.nutritionix.com/v2/search/instant?query={listOfFood[i]}&branded=true&common=false&detailed=true'
         print(URL)
         req = requests.get(URL, headers=headers)
         if req.status_code == 200:
             json = req.json()
             brandes = json["branded"]
-            # itération sur chaque marque de produit
+            # Itération sur chaque marque de produit
             for j in range(len(brandes)):
                 brandes[j]["new_nutrients"] = []
                 # Itération sur chaque nutriment pour récupérer les labels correspondant
@@ -50,7 +49,7 @@ def get_nutriscore(listOfFood, listOfNutrients):
                 # Récupération du nutriscore du produit
                 nutriscore = Nutriscore(brandes[j]["new_nutrients"])
                 brandes[j]["nutriscore"] = nutriscore.nutriscore
-
+                
                 print(brandes[j])
 
 
@@ -64,5 +63,5 @@ listOfNutrients = get_nutrients()
 print(listOfNutrients)
 
 print("----- listOfNutriscore ------")
-get_nutriscore(listOfFood, listOfNutrients)
+extract_data(listOfFood, listOfNutrients)
 
