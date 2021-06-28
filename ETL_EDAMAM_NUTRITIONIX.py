@@ -193,7 +193,7 @@ class ETL_EDAMAM_NUTRITIONIX:
 # The __main__ block actually execute the graph.
 ###
 if __name__ == '__main__':
-    etl = ETL()
+    etl = ETL_EDAMAM_NUTRITIONIX()
     parser = bonobo.get_argument_parser()
     with bonobo.parse_args(parser) as options:
         bonobo.run(
