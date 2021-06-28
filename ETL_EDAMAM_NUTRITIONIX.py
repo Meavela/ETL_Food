@@ -6,7 +6,7 @@ from nutriscore import Nutriscore
 from decouple import config
 from elasticsearch import Elasticsearch
 
-class ETL:
+class ETL_EDAMAM_NUTRITIONIX:
     def __init__(self):
         self.listOfFood = self.get_foodname()
         self.listOfNutrients = self.get_nutrients()
