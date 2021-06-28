@@ -1,70 +1,81 @@
 import bonobo
-import requests
-import csv
+import json
+from Product import Product
+from source import Source
+from bonobo.config import use_raw_input
+from decouple import config
+from elasticsearch import Elasticsearch
+from getNutriscore import calculeNutriscore
 
-FABLABS_API_URL = 'https://world.openfoodfacts.org/cgi/search.pl?action=process&tagtype_0=categories&tag_contains_0=contains&tag_0=cereals&json=true'
+class openETL:
+    def __init__(self):
+        self.elasticsearch = Elasticsearch(
+            cloud_id=config('ELASTIC_CLOUD_ID'),
+            http_auth=(config('ELASTIC_USERNAME'), config('ELASTIC_PASSWORD')),
+        )
+        self.elasticsearch.delete_by_query(index="products", body={"query": {"match_all": {}}})
 
-class Product:
-    def __init__(self, name, nova, nutriscore) -> None:
-        self.name = name
-        self.nova = nova
-        self.nutriscore = nutriscore
-
-def extract_fablabs():
-    requete = requests.get(FABLABS_API_URL).json().get('products')
-    data = []
-    for i in range(24):
-        product = Product(requete[i].get('product_name'), requete[i].get('nova_group'), requete[i].get('nutriscore_grade'))
-        data.append(product)
-
-    return data
-
-def load(args):
-    """for product in args:
-        print(f"{product.name} nova:{product.nova} nutriscore:{product.nutriscore}")"""
-    i = 0
-    for row in args:
-        if i < 1:
-            print(row)
-        i += 1
+    @use_raw_input
+    def load(self, product):
+        if (product.nutriscore_grade == ""):
+            myProduct = Product(product.product_name, calculeNutriscore(product), product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
+        else:
+            myProduct = Product(product.product_name, product.nutriscore_grade, product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
+        print(json.dumps(myProduct.__dict__))
     
+        # Check si ça existe en BDD
+        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": product.product_name}}})
+        # Si non, insert en BDD
+        print(result["hits"]["hits"])
+        if not result["hits"]["hits"]:
+            product = {
+                "from": myProduct.origins,
+                "source": myProduct.source,
+                "product": myProduct.name,
+                "brand": myProduct.brands,
+                "categories": myProduct.categories,
+                "image": myProduct.image,
+                "ingredients": myProduct.ingredients,
+                "nutriscore": myProduct.nutriscore
+            }
+            print("*** To insert ***")
+            print(product)
+            response = self.elasticsearch.index(index="products", body=product)
+            print(response['result'])
 
-def loadCsv():
-    file = open("en.openfoodfacts.org.products.csv")
-    reader = csv.reader(file, delimiter="\t")
-    return reader
 
-def get_graph(**options):
-    """
-    This function builds the graph that needs to be executed.
+    def get_graph(self, **options):
+        """
+        This function builds the graph that needs to be executed.
 
-    :return: bonobo.Graph
+        :return: bonobo.Graph
 
-    """
-    graph = bonobo.Graph()
-    graph.add_chain(bonobo.CsvReader('en.openfoodfacts.org.products.csv', delimiter="\t"), bonobo.Limit(10), bonobo.PrettyPrinter())
+        """
+        graph = bonobo.Graph()
+        graph.add_chain(bonobo.CsvReader('en.openfoodfacts.org.products.csv', delimiter="\t"), bonobo.Limit(3), self.load)
 
-    return graph
+        return graph
 
 
-def get_services(**options):
-    """
-    This function builds the services dictionary, which is a simple dict of names-to-implementation used by bonobo
-    for runtime injection.
+    def get_services(self, **options):
+        """
+        This function builds the services dictionary, which is a simple dict of names-to-implementation used by bonobo
+        for runtime injection.
 
-    It will be used on top of the defaults provided by bonobo (fs, http, ...). You can override those defaults, or just
-    let the framework define them. You can also define your own services and naming is up to you.
+        It will be used on top of the defaults provided by bonobo (fs, http, ...). You can override those defaults, or just
+        let the framework define them. You can also define your own services and naming is up to you.
 
-    :return: dict
-    """
-    return {}
+        :return: dict
+        """
+        return {}
 
 
 # The __main__ block actually execute the graph.
 if __name__ == '__main__':
+    etl = openETL()
     parser = bonobo.get_argument_parser()
     with bonobo.parse_args(parser) as options:
         bonobo.run(
-            get_graph(**options),
-            services=get_services(**options)
+            etl.get_graph(**options),
+            services=etl.get_services(**options)
         )
