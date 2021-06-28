@@ -46,6 +46,7 @@ class ETL:
     # Ce sont les données sur lesquelles on va appliquer des transformations
     ###
     def extract_data(self):
+        # self.elasticsearch.delete_by_query(index="products", body={"query": {"match_all": {}}})
         ID = config('NUTRITIONAPI_SECRET_ID')
         KEY = config('NUTRITIONAPI_SECRET_KEY')
         headers = {"x-app-id":ID, "x-app-key": KEY, "x-remote-user-id": "0"}
@@ -67,7 +68,6 @@ class ETL:
     # Contient toutes les règles de transformation à appliquer sur les données
     ###
     def transform(self,*args):
-        print("------------")    
         
         # Itération sur chaque nutriment pour récupérer les labels correspondant
         args[0]["new_nutrients"] = []
@@ -136,9 +136,27 @@ class ETL:
     # Ne retourne absolument rien
     ###
     def load(self,*args):
+        print("------------")    
         # Check si ça existe en BDD
+        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": args[0]['food_name']}}})
         # Si non, insert en BDD
-        print(*args)
+        print(result["hits"]["hits"])
+        if not result["hits"]["hits"]:
+            product = {
+                "from": args[0]['locale'],
+                "source": args[0]['source_api'],
+                "product": args[0]['food_name'],
+                "brand": args[0]['brand_name'],
+                "categories": args[0]['claims'],
+                "image": args[0]['photo'],
+                "ingredients": args[0]['ingredients'],
+                "nutriscore": args[0]['nutriscore']
+            }
+            print("*** To insert ***")
+            print(product)
+            # response = self.elasticsearch.index(index="products", body=product)
+            # print(response['result'])
+        # print(args[0])
 
     ###
     # Permet de configurer le graphique Bonobo
