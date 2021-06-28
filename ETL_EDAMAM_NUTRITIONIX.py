@@ -1,6 +1,6 @@
-import elasticsearch
 from source import Source
 import bonobo
+import time
 import requests
 from nutriscore import Nutriscore
 from decouple import config
@@ -117,6 +117,8 @@ class ETL_EDAMAM_NUTRITIONIX:
         # Ajout de la source
         args[0]["source_api"] = Source.EDAMAM_NUTRITIONIX.name
 
+        args[0]['locale'] = args[0]['locale'].split("_")[1]
+
         # Suppression des données inutiles
         del args[0]["nix_brand_id"]
         del args[0]["nix_item_id"]
@@ -154,10 +156,10 @@ class ETL_EDAMAM_NUTRITIONIX:
             }
             print("*** To insert ***")
             print(product)
-            # response = self.elasticsearch.index(index="products", body=product)
-            # print(response['result'])
+            response = self.elasticsearch.index(index="products", body=product)
+            print(response['result'])
         # print(args[0])
-
+        time.sleep(5)
     ###
     # Permet de configurer le graphique Bonobo
     # Cette configuration est totalement personnalisable
