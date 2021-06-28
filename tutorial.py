@@ -1,7 +1,5 @@
 import bonobo
-import json
 from Product import Product
-from source import Source
 from bonobo.config import use_raw_input
 from decouple import config
 from elasticsearch import Elasticsearch
@@ -13,35 +11,34 @@ class openETL:
             cloud_id=config('ELASTIC_CLOUD_ID'),
             http_auth=(config('ELASTIC_USERNAME'), config('ELASTIC_PASSWORD')),
         )
-        self.elasticsearch.delete_by_query(index="products", body={"query": {"match_all": {}}})
+        #self.elasticsearch.delete_by_query(index="products", body={"query": {"match_all": {}}})
 
-    @use_raw_input
     def load(self, product):
-        if (product.nutriscore_grade == ""):
-            myProduct = Product(product.product_name, calculeNutriscore(product), product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
-        else:
-            myProduct = Product(product.product_name, product.nutriscore_grade, product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
-        print(json.dumps(myProduct.__dict__))
-    
         # Check si ça existe en BDD
-        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": product.product_name}}})
+        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": product.name}}})
         # Si non, insert en BDD
-        print(result["hits"]["hits"])
         if not result["hits"]["hits"]:
             product = {
-                "from": myProduct.origins,
-                "source": myProduct.source,
-                "product": myProduct.name,
-                "brand": myProduct.brands,
-                "categories": myProduct.categories,
-                "image": myProduct.image,
-                "ingredients": myProduct.ingredients,
-                "nutriscore": myProduct.nutriscore
+                "from": product.origins,
+                "source": product.source,
+                "product": product.name,
+                "brand": product.brands,
+                "categories": product.categories,
+                "image": product.image,
+                "ingredients": product.ingredients,
+                "nutriscore": product.nutriscore
             }
-            print("*** To insert ***")
+
             print(product)
             response = self.elasticsearch.index(index="products", body=product)
-            print(response['result'])
+
+    @use_raw_input
+    def transform(self, product):
+        if (product.nutriscore_grade == ""):
+            myProduct = Product(product.product_name, calculeNutriscore(product), product.brands, product.categories, product.ingredients_text, product.countries_en, product.image_url)
+        else:
+            myProduct = Product(product.product_name, product.nutriscore_grade.upper(), product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
+        yield myProduct
 
 
     def get_graph(self, **options):
@@ -52,7 +49,7 @@ class openETL:
 
         """
         graph = bonobo.Graph()
-        graph.add_chain(bonobo.CsvReader('en.openfoodfacts.org.products.csv', delimiter="\t"), bonobo.Limit(3), self.load)
+        graph.add_chain(bonobo.CsvReader('en.openfoodfacts.org.products.csv', delimiter="\t"), self.transform, self.load)
 
         return graph
 

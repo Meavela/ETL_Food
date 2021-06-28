@@ -109,12 +109,12 @@ def calculeNutriscore(product):
             positive_point += 5
     total = negative_point - positive_point
     if (total < 0):
-        return 'a'
+        return 'A'
     elif (total >= 0 & total <= 2):
-        return 'b'
+        return 'B'
     elif (total >= 3 & total <= 10):
-        return 'c'
+        return 'C'
     elif (total >= 11 & total <= 18):
-        return 'd'
+        return 'D'
     elif (total >= 19):
-        return 'e'
+        return 'E'
