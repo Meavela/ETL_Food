@@ -158,7 +158,13 @@ class ETL_EDAMAM_NUTRITIONIX:
     def load(self,*args):
         print(f"----- {args[0]['food_name']} -----")    
         # Check si ça existe en BDD
-        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": args[0]['food_name']}}})
+        body = {"query": {
+                    "terms" : { 
+                        "product" : [args[0]['food_name']]
+                        }
+                    }
+                }
+        result = self.elasticsearch.search(index="products", body=body)
         
         # Si non, insert en BDD
         # print(result["hits"]["hits"])
@@ -173,6 +179,7 @@ class ETL_EDAMAM_NUTRITIONIX:
                 "ingredients": args[0]['ingredients'],
                 "nutriscore": args[0]['nutriscore']
             }
+            print(product)
             self.elasticsearch.index(index="products", body=product)
         time.sleep(5)
     
