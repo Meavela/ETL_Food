@@ -15,7 +15,7 @@ class openETL:
 
     def load(self, product):
         # Check si ça existe en BDD
-        result = self.elasticsearch.search(index="products", body={"query":{"match": {"product": product.name}}})
+        result = self.elasticsearch.search(index="products", body={"query":{"terms": {"product": [product.name]}}})
         # Si non, insert en BDD
         if not result["hits"]["hits"]:
             product = {
@@ -28,16 +28,30 @@ class openETL:
                 "ingredients": product.ingredients,
                 "nutriscore": product.nutriscore
             }
-
-            print(product)
             response = self.elasticsearch.index(index="products", body=product)
+        else:
+            for productBD in result["hits"]["hits"]:
+                if (productBD["_source"]["from"] == "" and product.origins != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"from":product.origins}})
+                if (productBD["_source"]["brand"] == "" and product.brands != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"brand":product.brands}})
+                if (productBD["_source"]["categories"] == "" and product.categories != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"categories":product.categories}})
+                if (productBD["_source"]["image"] == "" and product.image != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"image":product.image}})
+                if (productBD["_source"]["ingredients"] == "" and product.ingredients != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"ingredients":product.ingredients}})
+                if (productBD["_source"]["categories"] == "" and product.categories != ""):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"categories":product.categories}})
+                if (productBD["_source"]["nutriscore"].islower()):
+                    self.elasticsearch.update(index="products", doc_type="_doc", id=productBD["_id"], body={"doc": {"nutriscore":product.nutriscore}})
 
     @use_raw_input
     def transform(self, product):
         if (product.nutriscore_grade == ""):
             myProduct = Product(product.product_name, calculeNutriscore(product), product.brands, product.categories, product.ingredients_text, product.countries_en, product.image_url)
         else:
-            myProduct = Product(product.product_name, product.nutriscore_grade.upper(), product.brands, product.categories, product.ingredients_text, product.origins, product.image_url)
+            myProduct = Product(product.product_name, product.nutriscore_grade.upper(), product.brands, product.categories, product.ingredients_text, product.countries_en, product.image_url)
         yield myProduct
 
 
